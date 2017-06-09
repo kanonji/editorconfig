@@ -1,0 +1,4 @@
+# http://www.php-fig.org/psr/psr-2/#indenting
+[*.php]
+indent_style = space
+indent_size  = 4
