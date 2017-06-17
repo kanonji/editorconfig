@@ -51,7 +51,7 @@ class ConfigFileMap{
 
         if(false === $this->pick($initialKey)) {
             $errorsString = join($this->errors, ', ');
-            throw new \RuntimeException("Key or file not exists.: {$errorsString}");
+            throw new \LogicException("Key or file not exists.: {$errorsString}");
         }
         return $this->list;
     }
@@ -99,6 +99,7 @@ class ConfigName{
 class Response{
     const OK = 200;
     const BAD_REQUEST = 400;
+    const INTERNAL_SERVER_ERROR = 500;
 
     protected $body;
     protected $statusCode;
@@ -113,6 +114,9 @@ class Response{
             case self::BAD_REQUEST:
                 $this->prepare400();
                 break;
+            case self::INTERNAL_SERVER_ERROR:
+                $this->prepare500();
+                break;
             default:
                 $this->prepare200();
         }
@@ -123,7 +127,11 @@ class Response{
     }
 
     protected function prepare400(){
-        header("HTTP/1.0 400 Bad Request");
+        header("HTTP/1.1 400 Bad Request");
+    }
+
+    protected function prepare500(){
+        header("HTTP/1.1 500 Internal Server Error");
     }
 }
 
@@ -134,7 +142,9 @@ try{
     $configName = new ConfigName($key);
     $editorconfigFile = new EditorConfigFile($configName);
     $response = new Response($editorconfigFile->generate(), Response::OK);
-} catch(\Exception $e) {
+} catch(\RuntimeException $e) {
     $response = new Response($e->getMessage(), Response::BAD_REQUEST);
+} catch(\LogicException $e) {
+    $response = new Response($e->getMessage(), Response::INTERNAL_SERVER_ERROR);
 }
 $response->output();
