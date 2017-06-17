@@ -8,18 +8,18 @@ class EditorConfigFile{
         'web' => ['html', 'css', 'javascript', 'config'],
         'php-web' => ['php', 'web'],
     ];
-    protected $initialKey;
+    protected $configName;
     protected $list = [];
     protected $errors = [];
 
-    public function __construct($key){
-        $this->initialKey = $key;
+    public function __construct(ConfigName $configName){
+        $this->configName = $configName;
     }
 
     public function generate(){
         $content = $this->loadFile('root');
-        if(false === $this->pick($this->initialKey)){
-            throw new \RuntimeException("`{$this->initialKey}` is wrong key.");
+        if(false === $this->pick((string)$this->configName)){
+            throw new \RuntimeException("`{$this->configName}` is wrong config name.");
         }
         foreach($this->list as $key){
             $content .= PHP_EOL;
@@ -53,6 +53,25 @@ class EditorConfigFile{
             throw new \RuntimeException("{$key}.editorconfig is not found.");
         }
         return $content;
+    }
+}
+
+class ConfigName{
+    protected $name;
+
+    public function __construct($name){
+        $this->name = $name;
+        if(false === $this->isValid()){
+            throw new \RuntimeException('Invalid config name.');
+        }
+    }
+
+    protected function isValid(){
+        return (bool)preg_match('/^[-_a-z0-9]+$/', $this->name);
+    }
+
+    public function __toString(){
+        return (string)$this->name;
     }
 }
 
@@ -91,12 +110,9 @@ try{
     $key = filter_input(INPUT_GET, 'key');
     if(empty($key)) return;
 
-    $isMatched = preg_match('/^[-_a-z0-9]+$/', $key);
-    if(empty($isMatched)) {
-        throw new \RuntimeException('Invalid key.');
-    }
+    $configName = new ConfigName($key);
 
-    $editorconfig = (new EditorConfigFile($key))->generate();
+    $editorconfig = (new EditorConfigFile($configName))->generate();
     $response = new Response($editorconfig, Response::OK);
 } catch(\Exception $e) {
     $response = new Response($e->getMessage(), Response::BAD_REQUEST);
