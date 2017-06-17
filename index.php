@@ -110,6 +110,21 @@ class Response{
     }
 
     public function output(){
+        $this->sendHeader();
+        if(self::OK === $this->statusCode){
+            $this->sendAttachment('.editorconfig');
+            return;
+        }
+        echo $this->body;
+    }
+
+    protected function sendAttachment($filename){
+        $this->sendHeader();
+        header('Content-Type: text/plain; charset=utf-8');
+        header("Content-Disposition: attachment; filename='{$filename}'");
+    }
+
+    protected function sendHeader(){
         switch($this->statusCode){
             case self::BAD_REQUEST:
                 $this->prepare400();
@@ -120,18 +135,19 @@ class Response{
             default:
                 $this->prepare200();
         }
-        echo $this->body;
     }
 
     protected function prepare200(){
     }
 
     protected function prepare400(){
-        header("HTTP/1.1 400 Bad Request");
+        header('HTTP/1.1 400 Bad Request');
+        header('Content-Type: text/plain; charset=utf-8');
     }
 
     protected function prepare500(){
-        header("HTTP/1.1 500 Internal Server Error");
+        header('HTTP/1.1 500 Internal Server Error');
+        header('Content-Type: text/plain; charset=utf-8');
     }
 }
 
