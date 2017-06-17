@@ -2,30 +2,58 @@
 namespace Kanonji\EditorConfig;
 
 class EditorConfigFile{
-    protected $map = [
+    protected $configFileMap = [
         'config' => ['json', 'yaml'],
         'unity' => ['csharp', 'config'],
         'web' => ['html', 'css', 'javascript', 'config'],
         'php-web' => ['php', 'web'],
     ];
     protected $configName;
-    protected $list = [];
-    protected $errors = [];
 
     public function __construct(ConfigName $configName){
         $this->configName = $configName;
+        $this->configFileMap = new ConfigFileMap($this->configFileMap);
     }
 
     public function generate(){
         $content = $this->loadFile('root');
-        if(false === $this->pick((string)$this->configName)){
-            throw new \RuntimeException("`{$this->configName}` is wrong config name.");
-        }
-        foreach($this->list as $key){
+
+        $keys = $this->configFileMap->getFileKeys($this->configName);
+        foreach($keys as $key){
             $content .= PHP_EOL;
             $content .= $this->loadFile($key);
         }
         return $content;
+    }
+
+    protected function loadFile($key){
+        if(false === $content = file_get_contents("{$key}.editorconfig")){
+            throw new \RuntimeException("{$key}.editorconfig is not found.");
+        }
+        return $content;
+    }
+}
+
+class ConfigFileMap{
+    protected $map;
+    protected $list = [];
+    protected $errors = [];
+
+    public function __construct($configMap){
+        $this->map = $configMap;
+    }
+
+    public function getFileKeys(ConfigName $configName){
+        $initialKey = (string)$configName;
+        if(false === $this->isValidKey($initialKey)){
+            throw new \RuntimeException("`{$initialKey}` is wrong config name.");
+        }
+
+        if(false === $this->pick($initialKey)) {
+            $errorsString = join($this->errors, ', ');
+            throw new \RuntimeException("Key or file not exists.: {$errorsString}");
+        }
+        return $this->list;
     }
 
     protected function pick($keys){
@@ -46,13 +74,6 @@ class EditorConfigFile{
             return file_exists("{$key}.editorconfig");
         }
         return $this->map[$key];
-    }
-
-    protected function loadFile($key){
-        if(false === $content = file_get_contents("{$key}.editorconfig")){
-            throw new \RuntimeException("{$key}.editorconfig is not found.");
-        }
-        return $content;
     }
 }
 
@@ -111,9 +132,8 @@ try{
     if(empty($key)) return;
 
     $configName = new ConfigName($key);
-
-    $editorconfig = (new EditorConfigFile($configName))->generate();
-    $response = new Response($editorconfig, Response::OK);
+    $editorconfigFile = new EditorConfigFile($configName);
+    $response = new Response($editorconfigFile->generate(), Response::OK);
 } catch(\Exception $e) {
     $response = new Response($e->getMessage(), Response::BAD_REQUEST);
 }
