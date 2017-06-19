@@ -109,9 +109,9 @@ class Response{
         $this->statusCode = $statusCode;
     }
 
-    public function output(){
+    public function output($isDownload){
         $this->sendHeader();
-        if(self::OK === $this->statusCode){
+        if($isDownload && self::OK === $this->statusCode){
             $this->sendAttachment('.editorconfig');
             return;
         }
@@ -154,6 +154,7 @@ class Response{
 try{
     $key = filter_input(INPUT_GET, 'key');
     if(empty($key)) return;
+    $isDownload = (bool)filter_input(INPUT_GET, 'download');
 
     $configName = new ConfigName($key);
     $editorconfigFile = new EditorConfigFile($configName);
@@ -163,4 +164,4 @@ try{
 } catch(\LogicException $e) {
     $response = new Response($e->getMessage(), Response::INTERNAL_SERVER_ERROR);
 }
-$response->output();
+$response->output($isDownload);
